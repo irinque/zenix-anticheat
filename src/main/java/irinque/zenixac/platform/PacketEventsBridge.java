@@ -5,7 +5,6 @@ import irinque.zenixac.checks.PacketOrderCheck.BlockPosition;
 import java.lang.reflect.Constructor;
 import java.lang.reflect.Field;
 import java.lang.reflect.InvocationHandler;
-import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
 import java.lang.reflect.Proxy;
 import java.util.UUID;
@@ -23,6 +22,16 @@ public final class PacketEventsBridge implements AutoCloseable {
     private final AtomicBoolean packetFailureLogged = new AtomicBoolean();
     private Object eventManager;
     private Object registeredListener;
+    private Method packetTypeMethod;
+    private Method cancelledMethod;
+    private Method userMethod;
+    private Method playerMethod;
+    private Method userUuidMethod;
+    private Method actionMethod;
+    private Method blockPositionMethod;
+    private Method blockXMethod;
+    private Method blockYMethod;
+    private Method blockZMethod;
 
     public PacketEventsBridge(Plugin plugin, PacketOrderCheck packetOrderCheck) {
         this.plugin = plugin;
@@ -50,13 +59,33 @@ public final class PacketEventsBridge implements AutoCloseable {
             Class<?> listenerType = Class.forName(
                     "com.github.retrooper.packetevents.event.PacketListener", true, classLoader
             );
-            Object packetType = diggingPacketType(classLoader);
-            Constructor<?> diggingWrapper = Class.forName(
+            Class<?> packetEventType = Class.forName(
+                    "com.github.retrooper.packetevents.event.PacketReceiveEvent", true, classLoader
+            );
+            Class<?> protocolPacketEventType = Class.forName(
+                    "com.github.retrooper.packetevents.event.ProtocolPacketEvent", true, classLoader
+            );
+            packetTypeMethod = protocolPacketEventType.getMethod("getPacketType");
+            cancelledMethod = protocolPacketEventType.getMethod("isCancelled");
+            userMethod = protocolPacketEventType.getMethod("getUser");
+            playerMethod = protocolPacketEventType.getMethod("getPlayer");
+            userUuidMethod = Class.forName(
+                    "com.github.retrooper.packetevents.protocol.player.User", true, classLoader
+            ).getMethod("getUUID");
+            Class<?> diggingWrapperType = Class.forName(
                     "com.github.retrooper.packetevents.wrapper.play.client.WrapperPlayClientPlayerDigging",
                     true, classLoader
-            ).getConstructor(Class.forName(
-                    "com.github.retrooper.packetevents.event.PacketReceiveEvent", true, classLoader
-            ));
+            );
+            Constructor<?> diggingWrapper = diggingWrapperType.getConstructor(packetEventType);
+            actionMethod = diggingWrapperType.getMethod("getAction");
+            blockPositionMethod = diggingWrapperType.getMethod("getBlockPosition");
+            Class<?> blockPositionType = Class.forName(
+                    "com.github.retrooper.packetevents.util.Vector3i", true, classLoader
+            );
+            blockXMethod = blockPositionType.getMethod("getX");
+            blockYMethod = blockPositionType.getMethod("getY");
+            blockZMethod = blockPositionType.getMethod("getZ");
+            Object packetType = diggingPacketType(classLoader);
             InvocationHandler handler = (proxy, method, arguments) -> {
                 if (method.getName().equals("onPacketReceive") && arguments != null && arguments.length == 1) {
                     handlePacket(arguments[0], packetType, diggingWrapper);
@@ -111,27 +140,24 @@ public final class PacketEventsBridge implements AutoCloseable {
 
     private void handlePacket(Object event, Object diggingPacketType, Constructor<?> wrapperConstructor) {
         try {
-            if (Boolean.TRUE.equals(invoke(event, "isCancelled"))) {
+            Object packetType = packetTypeMethod.invoke(event);
+            if (!diggingPacketType.equals(packetType) || Boolean.TRUE.equals(cancelledMethod.invoke(event))) {
                 return;
             }
-            Object packetType = invoke(event, "getPacketType");
-            if (!diggingPacketType.equals(packetType)) {
-                return;
-            }
-            Object user = invoke(event, "getUser");
-            Object uuid = invoke(user, "getUUID");
-            Object playerObject = invoke(event, "getPlayer");
+            Object user = userMethod.invoke(event);
+            Object uuid = userUuidMethod.invoke(user);
+            Object playerObject = playerMethod.invoke(event);
             if (!(uuid instanceof UUID playerId) || !(playerObject instanceof Player player)) {
                 return;
             }
 
             Object wrapper = wrapperConstructor.newInstance(event);
-            Object action = invoke(wrapper, "getAction");
-            Object position = invoke(wrapper, "getBlockPosition");
+            Object action = actionMethod.invoke(wrapper);
+            Object position = blockPositionMethod.invoke(wrapper);
             BlockPosition blockPosition = new BlockPosition(
-                    ((Number) invoke(position, "getX")).intValue(),
-                    ((Number) invoke(position, "getY")).intValue(),
-                    ((Number) invoke(position, "getZ")).intValue()
+                    ((Number) blockXMethod.invoke(position)).intValue(),
+                    ((Number) blockYMethod.invoke(position)).intValue(),
+                    ((Number) blockZMethod.invoke(position)).intValue()
             );
             packetOrderCheck.onDiggingPacket(player, playerId, action.toString(), blockPosition);
         } catch (ReflectiveOperationException | RuntimeException exception) {
@@ -149,10 +175,6 @@ public final class PacketEventsBridge implements AutoCloseable {
         );
         Field field = clientPacketTypes.getField("PLAYER_DIGGING");
         return field.get(null);
-    }
-
-    private Object invoke(Object target, String methodName) throws ReflectiveOperationException {
-        return target.getClass().getMethod(methodName).invoke(target);
     }
 
     private Object objectMethod(Object proxy, Method method, Object[] arguments) {
