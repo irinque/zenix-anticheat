@@ -80,13 +80,13 @@ public final class ZenixAnticheat extends JavaPlugin {
         PacketOrderCheck packetOrderCheck = new PacketOrderCheck(configurationManager, violationManager, scheduler);
         getServer().getPluginManager().registerEvents(packetOrderCheck, this);
         packetEventsBridge = new PacketEventsBridge(this, packetOrderCheck);
-        boolean packetOrderAvailable = packetEventsBridge.register();
+        boolean packetOrderAvailable = packetEventsBridge.refresh(settings.packetOrder().enabled());
         if (configurationManager.get().packetOrder().enabled() && !packetOrderAvailable) {
             getLogger().warning("[ZenixAC] Packet-order check is unavailable; install PacketEvents "
                     + "2.14.0 or newer and restart, or disable packet-order.enabled");
         }
         ZenixCommand command = new ZenixCommand(
-                this, configurationManager, violationService, staffNotifier, scheduler
+                this, configurationManager, violationService, staffNotifier, scheduler, packetEventsBridge
         );
         getCommand("zenixac").setExecutor(command);
         getCommand("zenixac").setTabCompleter(command);

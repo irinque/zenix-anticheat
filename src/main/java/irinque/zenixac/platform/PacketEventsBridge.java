@@ -38,7 +38,18 @@ public final class PacketEventsBridge implements AutoCloseable {
         this.packetOrderCheck = packetOrderCheck;
     }
 
+    public boolean refresh(boolean enabled) {
+        if (!enabled) {
+            close();
+            return true;
+        }
+        return register();
+    }
+
     public boolean register() {
+        if (registeredListener != null) {
+            return true;
+        }
         Plugin packetEvents = plugin.getServer().getPluginManager().getPlugin(PACKET_EVENTS_PLUGIN);
         if (packetEvents == null || !packetEvents.isEnabled()) {
             return false;

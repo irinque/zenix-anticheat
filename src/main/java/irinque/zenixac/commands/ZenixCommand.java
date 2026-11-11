@@ -6,6 +6,7 @@ import irinque.zenixac.config.ConfigurationManager;
 import irinque.zenixac.model.PlayerProfile;
 import irinque.zenixac.model.ViolationRecord;
 import irinque.zenixac.notification.StaffNotifier;
+import irinque.zenixac.platform.PacketEventsBridge;
 import irinque.zenixac.platform.PlatformScheduler;
 import irinque.zenixac.storage.ViolationService;
 import java.time.Instant;
@@ -37,19 +38,22 @@ public final class ZenixCommand implements CommandExecutor, TabCompleter {
     private final ViolationService violationService;
     private final StaffNotifier staffNotifier;
     private final PlatformScheduler scheduler;
+    private final PacketEventsBridge packetEventsBridge;
 
     public ZenixCommand(
             ZenixAnticheat plugin,
             ConfigurationManager configurationManager,
             ViolationService violationService,
             StaffNotifier staffNotifier,
-            PlatformScheduler scheduler
+            PlatformScheduler scheduler,
+            PacketEventsBridge packetEventsBridge
     ) {
         this.plugin = plugin;
         this.configurationManager = configurationManager;
         this.violationService = violationService;
         this.staffNotifier = staffNotifier;
         this.scheduler = scheduler;
+        this.packetEventsBridge = packetEventsBridge;
     }
 
     @Override
@@ -182,6 +186,12 @@ public final class ZenixCommand implements CommandExecutor, TabCompleter {
         }
         try {
             configurationManager.reload();
+            boolean packetOrderEnabled = configurationManager.get().packetOrder().enabled();
+            boolean packetOrderAvailable = packetEventsBridge.refresh(packetOrderEnabled);
+            if (packetOrderEnabled && !packetOrderAvailable) {
+                plugin.getLogger().warning("[ZenixAC] Packet-order check is unavailable; install PacketEvents "
+                        + "2.14.0 or newer and restart");
+            }
             staffNotifier.refreshRecipients();
             plugin.getServer().getPluginManager().callEvent(new ZenixEvents.ConfigurationReload(true, ""));
             send(sender, render("reload-success", Map.of()));
