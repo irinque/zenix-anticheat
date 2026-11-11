@@ -4,7 +4,9 @@ import irinque.zenixac.config.ConfigurationManager;
 import irinque.zenixac.config.SettingsException;
 import irinque.zenixac.checks.ActionRateCheck;
 import irinque.zenixac.checks.CombatCheck;
+import irinque.zenixac.checks.BlockInteractionCheck;
 import irinque.zenixac.checks.MovementCheck;
+import irinque.zenixac.checks.VehicleCheck;
 import irinque.zenixac.checks.ViolationManager;
 import irinque.zenixac.commands.ZenixCommand;
 import irinque.zenixac.listeners.PlayerSessionListener;
@@ -68,6 +70,8 @@ public final class ZenixAnticheat extends JavaPlugin {
         getServer().getPluginManager().registerEvents(new MovementCheck(configurationManager, violationManager), this);
         getServer().getPluginManager().registerEvents(new CombatCheck(configurationManager, violationManager), this);
         getServer().getPluginManager().registerEvents(new ActionRateCheck(configurationManager, violationManager), this);
+        getServer().getPluginManager().registerEvents(new BlockInteractionCheck(configurationManager, violationManager), this);
+        getServer().getPluginManager().registerEvents(new VehicleCheck(configurationManager, violationManager), this);
         ZenixCommand command = new ZenixCommand(
                 this, configurationManager, violationService, staffNotifier, scheduler
         );
