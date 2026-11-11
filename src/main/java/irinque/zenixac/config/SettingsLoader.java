@@ -27,6 +27,9 @@ public final class SettingsLoader {
         }
         YamlConfiguration messages = loadFile(language.equals("en") ? "messages-en.yml" : "messages.yml");
 
+        if (!general.contains("schema-version")) {
+            throw error(general, "schema-version", "is required");
+        }
         int schemaVersion = integer(general, "schema-version", 1, 1, 1);
         if (schemaVersion != SUPPORTED_SCHEMA_VERSION) {
             throw error("config.yml", "schema-version", "expected " + SUPPORTED_SCHEMA_VERSION);
