@@ -74,10 +74,10 @@ public final class PacketEventsBridge implements AutoCloseable {
                     "com.github.retrooper.packetevents.event.PacketListenerPriority", true, classLoader
             );
             @SuppressWarnings({"rawtypes", "unchecked"})
-            Object normalPriority = Enum.valueOf((Class<? extends Enum>) priorityType.asSubclass(Enum.class), "NORMAL");
+            Object normalPriority = Enum.valueOf((Class<? extends Enum>) priorityType.asSubclass(Enum.class), "MONITOR");
             Method registerMethod = eventManager.getClass().getMethod("registerListener", listenerType, priorityType);
             registeredListener = registerMethod.invoke(eventManager, listener, normalPriority);
-            plugin.getLogger().info("[ZenixAC] PacketEvents packet listener is registered through version " + version);
+            plugin.getLogger().info("[ZenixAC] PacketEvents listener registered (version " + version + ")");
             return true;
         } catch (ReflectiveOperationException | LinkageError | RuntimeException exception) {
             plugin.getLogger().log(Level.WARNING,
@@ -111,6 +111,9 @@ public final class PacketEventsBridge implements AutoCloseable {
 
     private void handlePacket(Object event, Object diggingPacketType, Constructor<?> wrapperConstructor) {
         try {
+            if (Boolean.TRUE.equals(invoke(event, "isCancelled"))) {
+                return;
+            }
             Object packetType = invoke(event, "getPacketType");
             if (!diggingPacketType.equals(packetType)) {
                 return;
