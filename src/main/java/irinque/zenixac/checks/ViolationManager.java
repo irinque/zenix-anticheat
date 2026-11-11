@@ -1,5 +1,7 @@
 package irinque.zenixac.checks;
 
+import irinque.zenixac.ZenixAnticheat;
+import irinque.zenixac.ZenixEvents;
 import irinque.zenixac.config.ConfigurationManager;
 import irinque.zenixac.model.ViolationRecord;
 import irinque.zenixac.notification.StaffNotifier;
@@ -14,18 +16,21 @@ import org.bukkit.entity.Player;
 public final class ViolationManager {
     private final Map<CheckKey, CheckState> levels = new ConcurrentHashMap<>();
     private final ConfigurationManager configurationManager;
+    private final ZenixAnticheat plugin;
     private final ViolationService violationService;
     private final SessionManager sessionManager;
     private final ClientProtocolProvider clientProtocolProvider;
     private final StaffNotifier staffNotifier;
 
     public ViolationManager(
+            ZenixAnticheat plugin,
             ConfigurationManager configurationManager,
             ViolationService violationService,
             SessionManager sessionManager,
             ClientProtocolProvider clientProtocolProvider,
             StaffNotifier staffNotifier
     ) {
+        this.plugin = plugin;
         this.configurationManager = configurationManager;
         this.violationService = violationService;
         this.sessionManager = sessionManager;
@@ -67,6 +72,7 @@ public final class ViolationManager {
                     Math.max(0, player.getPing())
             );
             violationService.record(violation);
+            plugin.getServer().getPluginManager().callEvent(new ZenixEvents.ViolationDetected(violation, alert));
             staffNotifier.notifyViolation(violation, alert);
         }
         return level;

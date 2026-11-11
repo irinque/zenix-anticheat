@@ -48,6 +48,7 @@ public final class StaffNotifier {
 
     public boolean toggleAlerts(Player player) {
         UUID playerId = player.getUniqueId();
+        staffRecipients.add(playerId);
         if (!alertsDisabled.add(playerId)) {
             alertsDisabled.remove(playerId);
             return true;
@@ -57,6 +58,7 @@ public final class StaffNotifier {
 
     public boolean toggleDebug(Player player) {
         UUID playerId = player.getUniqueId();
+        staffRecipients.add(playerId);
         if (!debugEnabled.add(playerId)) {
             debugEnabled.remove(playerId);
             return false;

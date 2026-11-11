@@ -23,7 +23,7 @@ The shared implementation compiles against the Bukkit API and avoids NMS and ser
 PlayerMoveEvent
   -> MovementCheck filters and samples horizontal movement
   -> ViolationManager updates per-player, per-check level and decay
-  -> ViolationRecord is sent to storage and staff notification paths
+  -> ViolationRecord is sent to storage, the public violation event, and staff notifications
   -> bounded single-worker queue -> SQLite
   -> entity scheduler -> permission-checked staff message
 ```
@@ -50,7 +50,7 @@ One background worker owns the SQLite connection and processes session, write, a
 - Add future independent check classes that call `ViolationManager` with a stable check code and safe diagnostic fields.
 - Extend settings with new versioned sections and migrations when a later release needs schema changes.
 - Add optional platform or protocol adapters without making them required for the core Bukkit event path.
-- Add public violation/session/reload events and external storage adapters in a later API phase.
+- Extend the shipped public violation/session/reload/command events and add external storage adapters.
 - Add reactions only behind explicit per-check configuration and after validation on legitimate and negative scenarios.
 
 ## Known Risks

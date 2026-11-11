@@ -17,6 +17,7 @@ Record unusual movement, review session history, and give staff configurable dia
 - **Session history** — store player sessions and violation records in a local SQLite database.
 - **Staff controls** — toggle alerts, inspect player profiles and history, reload settings, and check storage queue health.
 - **Folia-aware player work** — schedule player-specific notifications on the entity's owning region.
+- **Integration events** — observe violations, player sessions, configuration reloads, and command handling.
 - **English and Russian messages** — edit message templates and select a language in `config.yml`.
 - **Optional client protocol details** — read the connecting client's protocol through ViaVersion when it is installed on the same server.
 
@@ -128,6 +129,7 @@ Set `language` to `en` or `ru`. Messages and notification formats use `&` color 
 
 See [docs/architecture.md](docs/architecture.md) for the internal design and planned extension points.
 See [docs/compatibility-matrix.md](docs/compatibility-matrix.md) for the runtime test plan and current results.
+See [docs/public-api.md](docs/public-api.md) for plugin events exposed to integrations.
 
 ---
 

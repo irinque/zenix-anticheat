@@ -55,11 +55,11 @@ public final class ZenixAnticheat extends JavaPlugin {
                 settings.queueCapacity(),
                 getLogger()
         );
-        sessionManager = new SessionManager(violationService);
+        sessionManager = new SessionManager(this, violationService);
         ClientProtocolProvider protocolProvider = ClientProtocolProvider.create(this);
         staffNotifier = new StaffNotifier(configurationManager, scheduler);
         ViolationManager violationManager = new ViolationManager(
-                configurationManager, violationService, sessionManager, protocolProvider, staffNotifier
+                this, configurationManager, violationService, sessionManager, protocolProvider, staffNotifier
         );
 
         getServer().getPluginManager().registerEvents(new PlayerSessionListener(sessionManager, staffNotifier), this);

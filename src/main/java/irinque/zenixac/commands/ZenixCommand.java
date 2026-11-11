@@ -1,6 +1,7 @@
 package irinque.zenixac.commands;
 
 import irinque.zenixac.ZenixAnticheat;
+import irinque.zenixac.ZenixEvents;
 import irinque.zenixac.config.ConfigurationManager;
 import irinque.zenixac.model.PlayerProfile;
 import irinque.zenixac.model.ViolationRecord;
@@ -55,6 +56,7 @@ public final class ZenixCommand implements CommandExecutor, TabCompleter {
     public boolean onCommand(CommandSender sender, Command command, String label, String[] args) {
         if (args.length == 0 || args[0].equalsIgnoreCase("help")) {
             send(sender, render("help", Map.of()));
+            fireCommandEvent(sender, args.length == 0 ? "help" : args[0]);
             return true;
         }
 
@@ -67,6 +69,7 @@ public final class ZenixCommand implements CommandExecutor, TabCompleter {
             case "performance" -> performance(sender, args);
             default -> send(sender, render("unknown-command", Map.of()));
         }
+        fireCommandEvent(sender, args[0].toLowerCase(Locale.ROOT));
         return true;
     }
 
@@ -180,9 +183,13 @@ public final class ZenixCommand implements CommandExecutor, TabCompleter {
         try {
             configurationManager.reload();
             staffNotifier.refreshRecipients();
+            plugin.getServer().getPluginManager().callEvent(new ZenixEvents.ConfigurationReload(true, ""));
             send(sender, render("reload-success", Map.of()));
         } catch (Exception exception) {
             plugin.getLogger().log(Level.SEVERE, "[ZenixAC] Configuration reload failed; active settings were preserved", exception);
+            plugin.getServer().getPluginManager().callEvent(
+                    new ZenixEvents.ConfigurationReload(false, exception.getMessage())
+            );
             send(sender, render("reload-failed", Map.of()));
         }
     }
@@ -232,6 +239,11 @@ public final class ZenixCommand implements CommandExecutor, TabCompleter {
         } else {
             plugin.getLogger().info(ChatColor.stripColor(message));
         }
+    }
+
+    private void fireCommandEvent(CommandSender sender, String subcommand) {
+        UUID playerId = sender instanceof Player player ? player.getUniqueId() : null;
+        plugin.getServer().getPluginManager().callEvent(new ZenixEvents.CommandCompleted(subcommand, playerId));
     }
 
     private boolean isValidPlayerName(String playerName) {
