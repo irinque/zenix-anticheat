@@ -15,12 +15,22 @@ public final class ConfigurationManager {
         return settings.get();
     }
 
+    public String message(String key) {
+        return settings.get().messages().get(key);
+    }
+
     public void load() throws SettingsException {
         settings.set(loader.load());
     }
 
     public void reload() throws SettingsException {
         PluginSettings next = loader.load();
+        PluginSettings current = settings.get();
+        if (current != null && (!current.databaseFile().equals(next.databaseFile())
+                || current.retentionDays() != next.retentionDays()
+                || current.queueCapacity() != next.queueCapacity())) {
+            throw new SettingsException("storage.yml and storage.* settings require a server restart");
+        }
         settings.set(next);
     }
 }

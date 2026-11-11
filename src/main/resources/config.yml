@@ -1,11 +1,9 @@
 schema-version: 1
+language: en
 
 storage:
   retention-days: 30
   queue-capacity: 4096
-
-performance:
-  sample-window-ms: 500
 
 notifications:
   enabled: true

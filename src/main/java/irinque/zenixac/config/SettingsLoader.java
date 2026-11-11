@@ -1,6 +1,9 @@
 package irinque.zenixac.config;
 
 import java.io.File;
+import java.util.LinkedHashMap;
+import java.util.List;
+import java.util.Map;
 import org.bukkit.configuration.file.YamlConfiguration;
 
 public final class SettingsLoader {
@@ -18,7 +21,11 @@ public final class SettingsLoader {
         YamlConfiguration notifications = loadFile("notifications.yml");
         YamlConfiguration storage = loadFile("storage.yml");
         YamlConfiguration punishments = loadFile("punishments.yml");
-        loadFile("messages.yml");
+        String language = string(general, "language").toLowerCase(java.util.Locale.ROOT);
+        if (!language.equals("en") && !language.equals("ru")) {
+            throw error("config.yml", "language", "supported values are en and ru");
+        }
+        YamlConfiguration messages = loadFile(language.equals("en") ? "messages-en.yml" : "messages.yml");
 
         int schemaVersion = integer(general, "schema-version", 1, 1, 1);
         if (schemaVersion != SUPPORTED_SCHEMA_VERSION) {
@@ -29,30 +36,54 @@ public final class SettingsLoader {
         if (!storageType.equalsIgnoreCase("sqlite")) {
             throw error("storage.yml", "type", "only sqlite is supported by this build");
         }
+        if (bool(punishments, "enabled", false)) {
+            throw error("punishments.yml", "enabled", "automatic punishments are not available in the passive MVP");
+        }
+        Object punishmentActions = punishments.get("actions", List.of());
+        if (!(punishmentActions instanceof List<?> actions)) {
+            throw error("punishments.yml", "actions", "must be a list");
+        } else if (!actions.isEmpty()) {
+            throw error("punishments.yml", "actions", "automatic actions are not available in the passive MVP");
+        }
 
         String databaseFile = string(storage, "file");
         if (databaseFile.contains("/") || databaseFile.contains("\\") || databaseFile.equals(".") || databaseFile.equals("..")) {
             throw error("storage.yml", "file", "must be a filename inside the plugin data directory");
         }
 
+        Map<String, String> messageValues = new LinkedHashMap<>();
+        for (String key : messages.getKeys(false)) {
+            messageValues.put(key, string(messages, key));
+        }
+        for (String required : new String[]{
+                "prefix", "no-permission", "unknown-command", "help", "alerts-enabled", "alerts-disabled",
+                "debug-enabled", "debug-disabled", "debug-config-disabled", "player-not-found", "profile-empty", "profile-summary",
+                "history-empty", "history-entry", "history-unavailable", "reload-success", "reload-failed", "performance", "invalid-usage"
+        }) {
+            if (!messageValues.containsKey(required)) {
+                throw error(messages, required, "is required");
+            }
+        }
+
         return new PluginSettings(
                 schemaVersion,
+                language,
                 integer(general, "storage.retention-days", 30, 0, 3650),
                 databaseFile,
                 integer(general, "storage.queue-capacity", 4096, 64, 65536),
-                integer(general, "performance.sample-window-ms", 500, 100, 10000),
                 bool(general, "notifications.enabled", true),
+                bool(general, "debug-notifications.enabled", false),
                 bool(checks, "movement.enabled", true),
                 decimal(checks, "movement.max-horizontal-speed", 18.0, 1.0, 100.0),
                 integer(checks, "movement.minimum-sample-ms", 500, 100, 10000),
                 decimal(checks, "movement.violation-increase", 1.0, 0.1, 100.0),
                 decimal(checks, "movement.decay-per-minute", 0.25, 0.0, 100.0),
-                decimal(checks, "movement.alert-threshold", 2.0, 0.1, 1000.0),
-                bool(punishments, "enabled", false),
+                decimal(checks, "movement.alert-threshold", 3.0, 0.1, 1000.0),
                 string(notifications, "alerts.permission"),
                 string(notifications, "alerts.format"),
                 string(notifications, "debug.permission"),
-                string(notifications, "debug.format")
+                string(notifications, "debug.format"),
+                messageValues
         );
     }
 

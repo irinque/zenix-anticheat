@@ -9,6 +9,7 @@ load: POSTWORLD
 
 authors: [ irinque ]
 description: Passive, configurable player-behaviour monitoring for Bukkit-compatible servers.
+softdepend: [ ViaVersion ]
 
 commands:
   zenixac:

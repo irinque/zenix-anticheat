@@ -119,13 +119,22 @@ public final class SqliteViolationStore implements ViolationStore {
 
     @Override
     public List<ViolationRecord> getRecent(UUID playerId, UUID sessionId, int limit) throws SQLException {
+        return getRecent("player_uuid", playerId.toString(), sessionId, limit);
+    }
+
+    @Override
+    public List<ViolationRecord> getRecent(String playerName, UUID sessionId, int limit) throws SQLException {
+        return getRecent("LOWER(player_name)", playerName.toLowerCase(java.util.Locale.ROOT), sessionId, limit);
+    }
+
+    private List<ViolationRecord> getRecent(String field, String value, UUID sessionId, int limit) throws SQLException {
         List<ViolationRecord> records = new ArrayList<>();
         try (PreparedStatement statement = connection.prepareStatement(
                 "SELECT session_id, player_uuid, player_name, check_code, occurred_at, violation_level, "
-                        + "details, client_protocol, ping FROM violations WHERE player_uuid = ? "
+                        + "details, client_protocol, ping FROM violations WHERE " + field + " = ? "
                         + "AND (? IS NULL OR session_id = ?) "
                         + "ORDER BY occurred_at DESC LIMIT ?")) {
-            statement.setString(1, playerId.toString());
+            statement.setString(1, value);
             if (sessionId == null) {
                 statement.setNull(2, java.sql.Types.VARCHAR);
                 statement.setNull(3, java.sql.Types.VARCHAR);
@@ -157,14 +166,23 @@ public final class SqliteViolationStore implements ViolationStore {
 
     @Override
     public PlayerProfile getProfile(UUID playerId) throws SQLException {
+        return getProfile("player_uuid", playerId.toString());
+    }
+
+    @Override
+    public PlayerProfile getProfile(String playerName) throws SQLException {
+        return getProfile("LOWER(player_name)", playerName.toLowerCase(java.util.Locale.ROOT));
+    }
+
+    private PlayerProfile getProfile(String field, String value) throws SQLException {
         try (PreparedStatement statement = connection.prepareStatement(
-                "SELECT COUNT(*) AS event_count, COALESCE(MAX(violation_level), 0) AS level "
-                        + "FROM violations WHERE player_uuid = ?")) {
-            statement.setString(1, playerId.toString());
+                "SELECT player_name, COUNT(*) AS event_count, COALESCE(MAX(violation_level), 0) AS level "
+                        + "FROM violations WHERE " + field + " = ?")) {
+            statement.setString(1, value);
             try (ResultSet result = statement.executeQuery()) {
                 return result.next()
-                        ? new PlayerProfile(result.getLong("event_count"), result.getDouble("level"))
-                        : new PlayerProfile(0, 0);
+                        ? new PlayerProfile(result.getString("player_name"), result.getLong("event_count"), result.getDouble("level"))
+                        : new PlayerProfile(null, 0, 0);
             }
         }
     }

@@ -29,13 +29,18 @@ class SqliteViolationStoreTest {
             ));
 
             List<ViolationRecord> events = store.getRecent(playerId, sessionId, 10);
+            List<ViolationRecord> eventsByName = store.getRecent("player", sessionId, 10);
             PlayerProfile profile = store.getProfile(playerId);
+            PlayerProfile profileByName = store.getProfile("PLAYER");
 
             assertEquals(1, events.size());
+            assertEquals(1, eventsByName.size());
             assertEquals("MOVE_SAMPLE", events.get(0).checkCode());
             assertNull(events.get(0).clientProtocol());
             assertEquals(1, profile.eventCount());
-            assertEquals(2.5, profile.currentViolationLevel());
+            assertEquals("Player", profile.playerName());
+            assertEquals(2.5, profile.highestRecordedViolationLevel());
+            assertEquals(1, profileByName.eventCount());
         }
     }
 }

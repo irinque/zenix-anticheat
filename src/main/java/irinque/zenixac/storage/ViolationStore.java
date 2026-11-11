@@ -19,7 +19,11 @@ public interface ViolationStore extends AutoCloseable {
 
     List<ViolationRecord> getRecent(UUID playerId, UUID sessionId, int limit) throws Exception;
 
+    List<ViolationRecord> getRecent(String playerName, UUID sessionId, int limit) throws Exception;
+
     PlayerProfile getProfile(UUID playerId) throws Exception;
+
+    PlayerProfile getProfile(String playerName) throws Exception;
 
     @Override
     void close() throws Exception;

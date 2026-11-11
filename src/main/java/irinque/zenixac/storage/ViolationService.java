@@ -24,6 +24,8 @@ public final class ViolationService implements AutoCloseable {
     private final LongAdder droppedEvents = new LongAdder();
     private volatile boolean storeReady;
     private volatile boolean stopping;
+    private volatile long lastStorageWarningAt;
+    private volatile long lastQueueWarningAt;
 
     public ViolationService(File databaseFile, int retentionDays, int queueCapacity, Logger logger) {
         this.store = new SqliteViolationStore(databaseFile);
@@ -87,8 +89,16 @@ public final class ViolationService implements AutoCloseable {
         return submitQuery(() -> store.getRecent(playerId, sessionId, limit));
     }
 
+    public CompletableFuture<List<ViolationRecord>> recent(String playerName, UUID sessionId, int limit) {
+        return submitQuery(() -> store.getRecent(playerName, sessionId, limit));
+    }
+
     public CompletableFuture<PlayerProfile> profile(UUID playerId) {
         return submitQuery(() -> store.getProfile(playerId));
+    }
+
+    public CompletableFuture<PlayerProfile> profile(String playerName) {
+        return submitQuery(() -> store.getProfile(playerName));
     }
 
     public long getAcceptedEvents() {
@@ -142,7 +152,7 @@ public final class ViolationService implements AutoCloseable {
                     if (countAsDropped) {
                         droppedEvents.increment();
                     }
-                    logger.log(Level.WARNING, "[ZenixAC] A history operation failed", exception);
+                    warnStorageFailure(exception);
                     if (future != null) {
                         future.completeExceptionally(exception);
                     }
@@ -156,8 +166,24 @@ public final class ViolationService implements AutoCloseable {
                 future.completeExceptionally(new IllegalStateException("History queue is full", exception));
             }
             if (countAsDropped) {
-                logger.warning("[ZenixAC] History queue is full; a violation record was not saved");
+                warnQueueFull();
             }
+        }
+    }
+
+    private synchronized void warnStorageFailure(Exception exception) {
+        long now = System.currentTimeMillis();
+        if (now - lastStorageWarningAt >= 60_000L) {
+            lastStorageWarningAt = now;
+            logger.log(Level.WARNING, "[ZenixAC] A history operation failed; live checks remain active", exception);
+        }
+    }
+
+    private synchronized void warnQueueFull() {
+        long now = System.currentTimeMillis();
+        if (now - lastQueueWarningAt >= 60_000L) {
+            lastQueueWarningAt = now;
+            logger.warning("[ZenixAC] History queue is full; some violation records may not be saved");
         }
     }
 
@@ -177,6 +203,11 @@ public final class ViolationService implements AutoCloseable {
             int pending = executor.shutdownNow().size();
             droppedEvents.add(pending);
             logger.log(Level.WARNING, "[ZenixAC] Interrupted while closing storage; queued operations may be unsaved", exception);
+        }
+
+        if (!executor.isTerminated()) {
+            logger.warning("[ZenixAC] Storage worker did not stop; leaving its connection to the process shutdown");
+            return;
         }
 
         try {
