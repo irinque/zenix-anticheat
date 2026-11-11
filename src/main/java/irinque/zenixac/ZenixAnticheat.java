@@ -4,6 +4,8 @@ import irinque.zenixac.config.ConfigurationManager;
 import irinque.zenixac.config.SettingsException;
 import irinque.zenixac.checks.ActionRateCheck;
 import irinque.zenixac.checks.CombatCheck;
+import irinque.zenixac.checks.FlightCheck;
+import irinque.zenixac.checks.PacketOrderCheck;
 import irinque.zenixac.checks.BlockInteractionCheck;
 import irinque.zenixac.checks.MovementCheck;
 import irinque.zenixac.checks.VehicleCheck;
@@ -12,6 +14,7 @@ import irinque.zenixac.commands.ZenixCommand;
 import irinque.zenixac.listeners.PlayerSessionListener;
 import irinque.zenixac.notification.StaffNotifier;
 import irinque.zenixac.platform.ClientProtocolProvider;
+import irinque.zenixac.platform.PacketEventsBridge;
 import irinque.zenixac.platform.PlatformScheduler;
 import irinque.zenixac.session.SessionManager;
 import irinque.zenixac.storage.ViolationService;
@@ -24,6 +27,7 @@ public final class ZenixAnticheat extends JavaPlugin {
     private SessionManager sessionManager;
     private PlatformScheduler scheduler;
     private StaffNotifier staffNotifier;
+    private PacketEventsBridge packetEventsBridge;
 
     @Override
     public void onEnable() {
@@ -72,6 +76,15 @@ public final class ZenixAnticheat extends JavaPlugin {
         getServer().getPluginManager().registerEvents(new ActionRateCheck(configurationManager, violationManager), this);
         getServer().getPluginManager().registerEvents(new BlockInteractionCheck(configurationManager, violationManager), this);
         getServer().getPluginManager().registerEvents(new VehicleCheck(configurationManager, violationManager), this);
+        getServer().getPluginManager().registerEvents(new FlightCheck(configurationManager, violationManager), this);
+        PacketOrderCheck packetOrderCheck = new PacketOrderCheck(configurationManager, violationManager, scheduler);
+        getServer().getPluginManager().registerEvents(packetOrderCheck, this);
+        packetEventsBridge = new PacketEventsBridge(this, packetOrderCheck);
+        boolean packetOrderAvailable = packetEventsBridge.register();
+        if (configurationManager.get().packetOrder().enabled() && !packetOrderAvailable) {
+            getLogger().warning("[ZenixAC] Packet-order check is unavailable; install PacketEvents "
+                    + "2.14.0 or newer and restart, or disable packet-order.enabled");
+        }
         ZenixCommand command = new ZenixCommand(
                 this, configurationManager, violationService, staffNotifier, scheduler
         );
@@ -92,6 +105,9 @@ public final class ZenixAnticheat extends JavaPlugin {
 
     @Override
     public void onDisable() {
+        if (packetEventsBridge != null) {
+            packetEventsBridge.close();
+        }
         if (sessionManager != null) {
             sessionManager.close();
         }
