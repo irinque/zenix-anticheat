@@ -16,7 +16,7 @@ The shared checks compile against the Bukkit API and avoid NMS. Packet-order sup
 - `PlatformScheduler` uses Bukkit scheduling on non-Folia servers and the entity scheduler through reflection on Folia. This keeps the Spigot 1.18.2 compile baseline while allowing region-safe player notifications on Folia.
 - `ClientProtocolProvider` discovers ViaVersion at runtime and reads a client's protocol when that API is available. It is optional and does not prevent startup.
 - `PacketEventsBridge` discovers PacketEvents 2.14.0+ at runtime and registers one packet listener through reflection. If the dependency is absent or incompatible, only packet-order monitoring is unavailable.
-- Bukkit-event checks each have their own class and stable check code. Packet-order state is updated from digging packets; violation creation is moved onto the player's scheduler so Bukkit and Folia entity access does not happen in the network callback.
+- Bukkit-event checks each have their own class and stable check code. Packet-order state is updated from packet data and the PacketEvents user UUID. If a threshold is reached, the bridge hands the provided player handle to `PlatformScheduler`; player-dependent reads and violation creation then run on the player's scheduler.
 
 ## Event Flow
 

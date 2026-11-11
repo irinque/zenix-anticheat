@@ -12,7 +12,8 @@ Record unusual movement, review session history, and give staff configurable dia
 
 ## Key Features
 
-- **Passive movement monitoring** — record unusually high horizontal movement rates for staff review.
+- **Passive behavior checks** — monitor movement, combat reach, action rates, block interaction rates, vehicle movement, flight signals, and digging packet order.
+- **Optional packet integration** — packet-order monitoring uses an external PacketEvents installation; all Bukkit-event checks work without it.
 - **Separate violation levels** — maintain a decaying level for each player and check.
 - **Session history** — store player sessions and violation records in a local SQLite database.
 - **Staff controls** — toggle alerts, inspect player profiles and history, reload settings, and check storage queue health.
@@ -25,11 +26,25 @@ Record unusual movement, review session history, and give staff configurable dia
 
 ## Functionality
 
-The first release includes one experimental movement check. It estimates horizontal speed across a configurable sample window and records a violation when the configured limit is exceeded. Its default limit is 18 blocks per second, with a 500 ms sample and an alert threshold of 3.0.
+All checks are passive: they record signals and notify staff, but never change or restrict player actions.
 
-The check skips teleports, world changes, vehicles, flight, gliding, swimming, riptiding, several movement effects and blocks, recent damage or velocity, and long sample gaps. These filters reduce obvious false positives, but they do not make the heuristic proof of cheating. Server lag, custom mechanics, and other plugins can still produce unusual movement. Use the check in passive mode, review its records, and tune or disable it for the server's game modes.
+| Check | Signal | Default threshold |
+| --- | --- | --- |
+| `MOVE_RATE` | Horizontal movement speed across a sample window. | 18 blocks/s over at least 500 ms. |
+| `COMBAT_REACH` | Distance from the attacker's eye to the nearest point of a target's bounding box on a server-accepted hit. Ping adds a bounded allowance. | 5.25 blocks plus ping compensation, capped at 2 blocks. |
+| `ACTION_RATE_SWING` | Repeated arm-swing events. | More than 30 per second. |
+| `ACTION_RATE_INTERACT` | Repeated non-physical player interactions. | More than 45 per second. |
+| `BLOCK_ACTION_RATE` | Successful block-break and block-place events. Creative and spectator players are skipped. | More than 32 per second. |
+| `VEHICLE_SPEED` | Sustained horizontal speed while riding a vehicle. | More than 80 blocks/s in consecutive samples. |
+| `FLIGHT_ASCENT` | Repeated upward movement above the configured vertical-speed limit. | More than 9.5 blocks/s for four consecutive samples. |
+| `FLIGHT_HOVER` | Nearly level, low-horizontal movement while airborne for a sustained period. | At least 2.5 seconds. |
+| `PACKET_ORDER_DIG` | Repeated unmatched block-dig finish/cancel packets. | Three mismatches within 30 seconds. |
 
-There are no automatic kicks, commands, rollbacks, or other punishments in this MVP. Enabling punishments or adding punishment actions to `punishments.yml` is rejected with a clear configuration error.
+Thresholds are deliberately conservative starting values. They have not been calibrated against a broad set of server game modes, custom movement plugins, or client versions. A recorded signal is not proof of cheating; review history and tune or disable checks for the server's mechanics.
+
+Packet-order monitoring requires [PacketEvents 2.14.0 or newer](https://github.com/retrooper/packetevents/releases) on the same server. It observes digging packet sequences only; it does not claim to validate every packet ordering pattern. If PacketEvents is absent or too old, ZenixAC logs that this one check is unavailable and keeps the other checks running.
+
+There are no automatic kicks, commands, rollbacks, or other punishments. Enabling punishments or adding punishment actions to `punishments.yml` is rejected with a clear configuration error.
 
 Each stored event includes the player's UUID and name, session ID, check code, timestamp, violation level, bounded diagnostic details, ping, and client protocol when available. Database work uses one bounded background queue. If SQLite is unavailable or the queue fills, live checks continue; the server log reports storage problems at a limited rate.
 
@@ -56,7 +71,7 @@ The client target is Minecraft 1.7–26.3. To connect that range to one server v
 | Older clients joining a newer server | ViaBackwards and ViaVersion |
 | Minecraft 1.7/1.8 clients joining a newer server | ViaRewind, ViaBackwards, and ViaVersion |
 
-The protocol adapter's own supported server versions and known client limitations apply. ZenixAC does not inspect or modify raw packets in this MVP.
+The protocol adapter's own supported server versions and known client limitations apply. ZenixAC does not modify packets; the optional PacketEvents bridge reads block-dig packet state for `PACKET_ORDER_DIG`.
 
 ---
 
@@ -66,6 +81,7 @@ The protocol adapter's own supported server versions and known client limitation
 - Java runtime suitable for the selected server version.
 - Optional: ViaVersion on the same server when staff need the connecting client's protocol in history.
 - Optional for cross-version connections: the required ViaVersion-family server or proxy plugins.
+- Optional for `PACKET_ORDER_DIG`: PacketEvents 2.14.0 or newer on the same backend server.
 
 Folia support requires region-safe scheduling. Setting `folia-supported: true` alone is not enough; ZenixAC uses the entity scheduler for player notifications. The code avoids server entity and world access on its SQLite worker thread.
 
@@ -79,7 +95,7 @@ Build with Maven:
 mvn clean package
 ```
 
-Copy `target/zenix-anticheat-1.0.0.jar` into the server's `plugins` directory and restart the server. SQLite JDBC is bundled in the plugin. ViaVersion remains an optional external plugin.
+Copy `target/zenix-anticheat-1.0.0.jar` into the server's `plugins` directory and restart the server. SQLite JDBC is bundled in the plugin. ViaVersion and PacketEvents remain external optional plugins; PacketEvents is needed only for packet-order monitoring.
 
 ---
 
@@ -106,14 +122,14 @@ Settings are created in `plugins/ZenixAC/` on first start.
 | File | Purpose |
 | --- | --- |
 | `config.yml` | Schema version, language, retention, queue capacity, and notification switches. |
-| `checks.yml` | Independent movement check limit, sampling interval, violation increase, decay, and alert threshold. |
+| `checks.yml` | Enable flags, thresholds, and per-check violation increases; shared violation decay and alert threshold. |
 | `notifications.yml` | Staff permissions and editable alert templates. |
 | `punishments.yml` | Reserved for a later phase; punishments must remain disabled and the action list empty in the MVP. |
 | `storage.yml` | SQLite selection and database filename. |
 | `messages.yml` | Russian command messages. |
 | `messages-en.yml` | English command messages. |
 
-Set `language` to `en` or `ru`. Messages and notification formats use `&` color codes. A valid live reload swaps settings together. Database file, queue capacity, and retention changes require a server restart; an attempted live change is rejected without replacing the active settings.
+Set `language` to `en` or `ru`. Messages and notification formats use `&` color codes. A valid live reload swaps settings together. Database file, queue capacity, and retention changes require a server restart; an attempted live change is rejected without replacing the active settings. If PacketEvents was missing at startup, install it and restart to register packet-order monitoring; when it is already present, the packet-order setting can be changed through reload.
 
 `storage.retention-days: 0` disables automatic history cleanup. Otherwise, records older than the configured number of days are deleted when the database starts.
 
@@ -121,8 +137,9 @@ Set `language` to `en` or `ru`. Messages and notification formats use `&` color 
 
 ## Current Limits
 
-- Movement is the only implemented check. Combat, packet-order, action-rate, block-interaction, vehicle, and flight checks are later work.
-- The threshold is a starting value, not a measured accuracy claim. Each game mode needs legitimate and negative test scenarios before stricter settings or automated action are considered.
+- These checks are first-pass passive heuristics, not accuracy claims. Each supported game mode needs legitimate and negative scenarios before thresholds are tightened or automated actions are considered.
+- `PACKET_ORDER_DIG` covers repeated unmatched digging sequences only and is unavailable without PacketEvents 2.14.0 or newer.
+- Custom movement, combat, world, and interaction plugins may produce patterns these checks cannot classify; the checks do not know every server-specific rule.
 - The accepted server-version ranges and client adapter combinations need runtime testing on old, intermediate, and current versions of each listed platform.
 - Folia scheduling has not yet been smoke-tested on a Folia server.
 - The public plugin API, spectator workflow, external database adapters, and automated actions are not included in this MVP.
