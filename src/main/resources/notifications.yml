@@ -1,0 +1,7 @@
+alerts:
+  permission: zenixac.alerts
+  format: "&8[&bZenixAC&8] &f{player} &7triggered &b{check}&7 (&f{level}&7)"
+
+debug:
+  permission: zenixac.debug
+  format: "&8[&bZenixAC Debug&8] &f{player} &7{check}: {details}"
