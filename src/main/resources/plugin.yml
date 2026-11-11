@@ -1,0 +1,42 @@
+name: ZenixAC
+prefix: [ ZenixAC ]
+version: '${project.version}'
+
+main: irinque.zenixac.ZenixAnticheat
+api-version: '1.18'
+folia-supported: true
+load: POSTWORLD
+
+authors: [ irinque ]
+description: Passive, configurable player-behaviour monitoring for Bukkit-compatible servers.
+softdepend: [ ViaVersion ]
+
+commands:
+  zenixac:
+    description: Manage ZenixAC alerts and diagnostics.
+    usage: /zenixac <help|alerts|debug|profile|history|reload|performance>
+    aliases: [ zac ]
+    permission: zenixac.command
+
+permissions:
+  zenixac.command:
+    description: Allows access to ZenixAC staff commands.
+    default: op
+  zenixac.alerts:
+    description: Allows receiving violation notifications.
+    default: op
+  zenixac.debug:
+    description: Allows receiving detailed diagnostic notifications.
+    default: op
+  zenixac.profile:
+    description: Allows viewing player profiles.
+    default: op
+  zenixac.history:
+    description: Allows viewing stored player history.
+    default: op
+  zenixac.reload:
+    description: Allows reloading ZenixAC configuration.
+    default: op
+  zenixac.performance:
+    description: Allows viewing ZenixAC performance information.
+    default: op

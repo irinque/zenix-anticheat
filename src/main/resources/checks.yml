@@ -1,0 +1,7 @@
+movement:
+  enabled: true
+  max-horizontal-speed: 18.0
+  minimum-sample-ms: 500
+  violation-increase: 1.0
+  decay-per-minute: 0.25
+  alert-threshold: 3.0

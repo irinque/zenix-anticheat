@@ -1,0 +1,12 @@
+schema-version: 1
+language: en
+
+storage:
+  retention-days: 30
+  queue-capacity: 4096
+
+notifications:
+  enabled: true
+
+debug-notifications:
+  enabled: false
