@@ -133,4 +133,4 @@ See [docs/public-api.md](docs/public-api.md) for plugin events exposed to integr
 
 ---
 
-Licensed under GPL-3.0. See [LICENSE](LICENSE).
+Licensed under GPL-3.0. See [LICENSE](LICENSE). Bundled dependency details are in [THIRD_PARTY_NOTICES.md](THIRD_PARTY_NOTICES.md) and in the plugin JAR.

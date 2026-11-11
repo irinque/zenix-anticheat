@@ -65,10 +65,22 @@ public final class PlatformScheduler {
 
     private boolean detectFolia() {
         try {
-            Class.forName("io.papermc.paper.threadedregions.RegionizedServer", false, plugin.getClass().getClassLoader());
-            return true;
-        } catch (ClassNotFoundException ignored) {
-            return false;
+            ClassLoader classLoader = plugin.getClass().getClassLoader();
+            Class<?> buildInfoType = Class.forName("io.papermc.paper.ServerBuildInfo", false, classLoader);
+            Object buildInfo = buildInfoType.getMethod("buildInfo").invoke(null);
+            Class<?> keyType = Class.forName("net.kyori.adventure.key.Key", false, classLoader);
+            Object foliaKey = keyType.getMethod("key", String.class, String.class).invoke(null, "papermc", "folia");
+            return (boolean) buildInfoType.getMethod("isBrandCompatible", keyType).invoke(buildInfo, foliaKey);
+        } catch (ReflectiveOperationException | LinkageError ignored) {
+            if (plugin.getServer().getName().equalsIgnoreCase("Folia")) {
+                return true;
+            }
+            try {
+                Class.forName("io.papermc.paper.threadedregions.RegionizedServer", false, plugin.getClass().getClassLoader());
+                return true;
+            } catch (ClassNotFoundException | LinkageError exception) {
+                return false;
+            }
         }
     }
 }

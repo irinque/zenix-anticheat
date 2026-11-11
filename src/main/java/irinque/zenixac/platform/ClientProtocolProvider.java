@@ -43,8 +43,11 @@ public final class ClientProtocolProvider {
         }
         try {
             Object protocol = playerVersionMethod.invoke(viaApi, playerId);
-            return protocol instanceof Number number ? number.intValue() : null;
-        } catch (ReflectiveOperationException exception) {
+            if (protocol instanceof Number number && number.intValue() > 0) {
+                return number.intValue();
+            }
+            return null;
+        } catch (ReflectiveOperationException | RuntimeException exception) {
             return null;
         }
     }
