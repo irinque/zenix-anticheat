@@ -68,6 +68,13 @@ public final class SettingsLoader {
             }
         }
 
+        double violationDecay = checks.contains("violations.decay-per-minute")
+                ? decimal(checks, "violations.decay-per-minute", 0.25, 0.0, 100.0)
+                : decimal(checks, "movement.decay-per-minute", 0.25, 0.0, 100.0);
+        double alertThreshold = checks.contains("violations.alert-threshold")
+                ? decimal(checks, "violations.alert-threshold", 3.0, 0.1, 1000.0)
+                : decimal(checks, "movement.alert-threshold", 3.0, 0.1, 1000.0);
+
         return new PluginSettings(
                 schemaVersion,
                 language,
@@ -80,8 +87,44 @@ public final class SettingsLoader {
                 decimal(checks, "movement.max-horizontal-speed", 18.0, 1.0, 100.0),
                 integer(checks, "movement.minimum-sample-ms", 500, 100, 10000),
                 decimal(checks, "movement.violation-increase", 1.0, 0.1, 100.0),
-                decimal(checks, "movement.decay-per-minute", 0.25, 0.0, 100.0),
-                decimal(checks, "movement.alert-threshold", 3.0, 0.1, 1000.0),
+                violationDecay,
+                alertThreshold,
+                new PluginSettings.CombatSettings(
+                        bool(checks, "combat.enabled", true),
+                        decimal(checks, "combat.max-reach", 5.25, 3.0, 10.0),
+                        decimal(checks, "combat.ping-compensation", 4.3, 0.0, 20.0),
+                        decimal(checks, "combat.max-ping-compensation", 2.0, 0.0, 5.0),
+                        decimal(checks, "combat.violation-increase", 1.0, 0.1, 100.0)
+                ),
+                new PluginSettings.ActionRateSettings(
+                        bool(checks, "action-rate.enabled", true),
+                        integer(checks, "action-rate.max-swings-per-second", 30, 1, 200),
+                        integer(checks, "action-rate.max-interactions-per-second", 45, 1, 200),
+                        decimal(checks, "action-rate.violation-increase", 0.5, 0.1, 100.0)
+                ),
+                new PluginSettings.BlockInteractionSettings(
+                        bool(checks, "block-interaction.enabled", true),
+                        integer(checks, "block-interaction.max-actions-per-second", 32, 1, 200),
+                        decimal(checks, "block-interaction.violation-increase", 0.5, 0.1, 100.0)
+                ),
+                new PluginSettings.VehicleSettings(
+                        bool(checks, "vehicle.enabled", true),
+                        decimal(checks, "vehicle.max-horizontal-speed", 80.0, 5.0, 1000.0),
+                        integer(checks, "vehicle.consecutive-samples", 2, 2, 10),
+                        decimal(checks, "vehicle.violation-increase", 1.0, 0.1, 100.0)
+                ),
+                new PluginSettings.FlightSettings(
+                        bool(checks, "flight.enabled", true),
+                        decimal(checks, "flight.max-vertical-speed", 9.5, 1.0, 50.0),
+                        integer(checks, "flight.consecutive-samples", 4, 2, 20),
+                        decimal(checks, "flight.violation-increase", 1.0, 0.1, 100.0)
+                ),
+                new PluginSettings.PacketOrderSettings(
+                        bool(checks, "packet-order.enabled", true),
+                        integer(checks, "packet-order.mismatch-limit", 3, 1, 20),
+                        integer(checks, "packet-order.mismatch-window-seconds", 30, 1, 600),
+                        decimal(checks, "packet-order.violation-increase", 1.0, 0.1, 100.0)
+                ),
                 string(notifications, "alerts.permission"),
                 string(notifications, "alerts.format"),
                 string(notifications, "debug.permission"),

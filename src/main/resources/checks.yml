@@ -1,7 +1,45 @@
+violations:
+  decay-per-minute: 0.25
+  alert-threshold: 3.0
+
 movement:
   enabled: true
   max-horizontal-speed: 18.0
   minimum-sample-ms: 500
   violation-increase: 1.0
-  decay-per-minute: 0.25
-  alert-threshold: 3.0
+
+combat:
+  enabled: true
+  max-reach: 5.25
+  ping-compensation: 4.3
+  max-ping-compensation: 2.0
+  violation-increase: 1.0
+
+action-rate:
+  enabled: true
+  max-swings-per-second: 30
+  max-interactions-per-second: 45
+  violation-increase: 0.5
+
+block-interaction:
+  enabled: true
+  max-actions-per-second: 32
+  violation-increase: 0.5
+
+vehicle:
+  enabled: true
+  max-horizontal-speed: 80.0
+  consecutive-samples: 2
+  violation-increase: 1.0
+
+flight:
+  enabled: true
+  max-vertical-speed: 9.5
+  consecutive-samples: 4
+  violation-increase: 1.0
+
+packet-order:
+  enabled: true
+  mismatch-limit: 3
+  mismatch-window-seconds: 30
+  violation-increase: 1.0
